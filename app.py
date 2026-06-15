@@ -14,6 +14,7 @@ import plotly.express as px
 
 from g2b_api import fetch_all, API_KEY
 from report import build_analysis, build_docx, _eok as _r_eok, _won as _r_won
+from excel_report import build_excel_report
 
 # ──────────────────────────────────────────────
 # 기본 설정
@@ -524,3 +525,38 @@ with tab7:
                          "터미널에서 `pip install python-docx` 를 실행해주세요.")
             except Exception as e:
                 st.error(f"보고서 생성 중 오류: {e}")
+
+    # ── 엑셀 양식 보고서 (요청 양식 기반) ──
+    st.divider()
+    st.markdown("#### 📊 엑셀 양식 보고서 (월별 발주리스트)")
+    st.caption("요청하신 엑셀 양식에 데이터를 자동으로 채워서 다운로드합니다. "
+               "주차별 구분은 양식 그대로 유지되고, 데이터는 월별로 시간 순으로 채워집니다.")
+
+    with st.expander("ℹ️ 양식의 월별 수용 가능 행 수 안내"):
+        st.markdown(
+            "- **1월**: 41행  |  **2월**: 70행  |  **3월**: 163행\n"
+            "- **4월**: 216행  |  **5월**: 175행  |  **6월**: 62행\n"
+            "- 이를 초과하는 데이터는 **'초과데이터' 시트**에 별도로 저장됩니다.\n"
+            "- 1~6월 외(예: 7월) 데이터도 '초과데이터' 시트에 저장됩니다."
+        )
+
+    if st.button("📊 엑셀 양식 보고서 만들기", type="secondary"):
+        with st.spinner("엑셀 양식에 데이터를 채우는 중..."):
+            try:
+                xlsx_buf = build_excel_report(df, _term, _bgn, _end)
+                xname = f"발주리스트_{_term}_{_bgn}_{_end}.xlsx"
+                st.success("✅ 엑셀 양식 보고서가 생성되었어요!")
+                st.download_button(
+                    "⬇️ 엑셀 양식 보고서 다운로드",
+                    data=xlsx_buf,
+                    file_name=xname,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary",
+                )
+            except FileNotFoundError as e:
+                st.error(
+                    f"❌ {e}\n\n"
+                    "**해결 방법**: `요청_양식_샘플_.xlsx` 파일을 `app.py`와 같은 폴더에 넣어주세요."
+                )
+            except Exception as e:
+                st.error(f"엑셀 보고서 생성 중 오류: {e}")
