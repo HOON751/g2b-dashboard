@@ -152,23 +152,20 @@ col_a, col_b = st.sidebar.columns(2)
 bgn = col_a.date_input("시작일", value=default_start, max_value=today)
 end = col_b.date_input("종료일", value=today, max_value=today)
 
-inqry_div = "1" if st.sidebar.radio(
-    "일자 기준", ["계약(납품요구)일자", "최초계약(납품요구)일자"], index=0
-) == "계약(납품요구)일자" else "2"
+# 일자 기준은 "계약(납품요구)일자"로 고정 (조달청 사이트와 동일)
+inqry_div = "1"
 
-# 최초계약여부 / 최종계약여부 필터 (실제 조달청 검색 화면과 동일)
-st.sidebar.markdown("**계약 차수 필터**")
-f_frst = st.sidebar.radio(
-    "최초계약여부",
-    ["전체", "최초계약만(Y)", "최초계약아님(N)"],
+# 계약 차수 필터 (실제 작동하는 API 파라미터: fnlCntrctDlvrReqChgOrdYn)
+f_chg = st.sidebar.radio(
+    "계약 차수",
+    ["전체 (모든 차수 포함)", "최종 차수만 (Y)", "최초 차수만 (N)"],
     index=0,
-    help="한 계약이 변경되면 여러 차수가 생기는데, 최초 차수만 볼지 선택합니다.",
-)
-f_fnl = st.sidebar.radio(
-    "최종계약여부",
-    ["전체", "최종계약만(Y)", "최종계약아님(N)"],
-    index=0,
-    help="여러 차수 중 가장 마지막(최종) 차수만 볼지 선택합니다.",
+    help=(
+        "한 계약이 변경되면 여러 차수가 생깁니다.\n\n"
+        "• 전체: 모든 차수 포함 (중복 가능)\n"
+        "• 최종 차수만: 가장 마지막 확정된 차수만\n"
+        "• 최초 차수만: 변경 전 원본 차수만"
+    ),
 )
 
 # 추가 필터
@@ -180,15 +177,10 @@ with st.sidebar.expander("➕ 추가 필터 (선택)"):
     f_prcrmnt = st.selectbox("조달구분", ["전체", "중앙조달(C)", "자체조달(S)"])
 
 extra = {}
-# 최초계약여부 (frstCntrctYn)
-if f_frst == "최초계약만(Y)":
-    extra["frstCntrctYn"] = "Y"
-elif f_frst == "최초계약아님(N)":
-    extra["frstCntrctYn"] = "N"
-# 최종계약여부 (fnlCntrctDlvrReqChgOrdYn)
-if f_fnl == "최종계약만(Y)":
+# 계약 차수 (fnlCntrctDlvrReqChgOrdYn): Y=최종만, N=최종 제외(최초), 빈값=전체
+if f_chg == "최종 차수만 (Y)":
     extra["fnlCntrctDlvrReqChgOrdYn"] = "Y"
-elif f_fnl == "최종계약아님(N)":
+elif f_chg == "최초 차수만 (N)":
     extra["fnlCntrctDlvrReqChgOrdYn"] = "N"
 if f_exclc == "우수제품만(Y)":
     extra["exclcProdctYn"] = "Y"
