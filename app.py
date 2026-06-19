@@ -155,10 +155,11 @@ end = col_b.date_input("종료일", value=today, max_value=today)
 # 일자 기준은 "계약(납품요구)일자"로 고정 (조달청 사이트와 동일)
 inqry_div = "1"
 
-# 최초계약여부 (조달청 사이트와 동일한 라벨)
-# 참고: API 파라미터는 fnlCntrctDlvrReqChgOrdYn (최종변경차수여부)이지만,
-#       조달청 화면의 "최초계약여부 Y"는 = API의 "fnlCntrctDlvrReqChgOrdYn=N" (최종 제외 = 최초만)
-#       으로 대응됨 (반대 의미)
+# 최초계약여부 (조달청 사이트와 동일)
+# 작동 원리: API 응답의 "변경차수(cntrctDlvrReqChgOrd)" 컬럼으로 자체 필터링
+#  - Y (최초계약만): 변경차수 = 0
+#  - N (최초 아님):  변경차수 ≠ 0 (1, 2, 3, ...)
+#  - X (전체):       필터 없음
 f_chg = st.sidebar.radio(
     "최초계약여부",
     ["전체 (X)", "Y", "N"],
@@ -167,8 +168,8 @@ f_chg = st.sidebar.radio(
     help=(
         "조달청 사이트의 '최초계약여부'와 동일합니다.\n\n"
         "• 전체(X): 모든 차수 포함\n"
-        "• Y: 최초계약만 (변경 전 원본 차수)\n"
-        "• N: 최초계약 아님 (변경/최종 차수만)"
+        "• Y: 최초계약만 (변경차수 = 0)\n"
+        "• N: 최초계약 아님 (변경차수 ≠ 0)"
     ),
 )
 
@@ -181,12 +182,7 @@ with st.sidebar.expander("➕ 추가 필터 (선택)"):
     f_prcrmnt = st.selectbox("조달구분", ["전체", "중앙조달(C)", "자체조달(S)"])
 
 extra = {}
-# "최초계약여부 Y" = "최종차수가 아님(=최초 차수)" = fnlCntrctDlvrReqChgOrdYn=N
-# "최초계약여부 N" = "최종차수임" = fnlCntrctDlvrReqChgOrdYn=Y
-if f_chg == "Y":
-    extra["fnlCntrctDlvrReqChgOrdYn"] = "N"  # 최초계약(=변경 전)만
-elif f_chg == "N":
-    extra["fnlCntrctDlvrReqChgOrdYn"] = "Y"  # 최초계약 아님(=최종 차수)만
+# 최초계약여부는 API 파라미터로 전달하지 않고, 받은 데이터를 자체 필터링함 (아래 search 후 처리)
 if f_exclc == "우수제품만(Y)":
     extra["exclcProdctYn"] = "Y"
 elif f_exclc == "일반제품만(N)":
@@ -260,6 +256,23 @@ if df is None:
     st.stop()
 
 if df.empty:
+    st.stop()
+
+# ──────────────────────────────────────────────
+# 자체 필터링: 최초계약여부 (변경차수 = 0 기준)
+# 조달청 사이트의 "최초계약여부 Y/N"와 동일한 결과를 자체적으로 구현
+# ──────────────────────────────────────────────
+if "변경차수" in df.columns:
+    # 변경차수를 숫자로 변환 (문자/숫자/None 혼재 가능성 대응)
+    chg_ord = pd.to_numeric(df["변경차수"], errors="coerce").fillna(-1)
+    if f_chg == "Y":
+        df = df[chg_ord == 0].reset_index(drop=True)
+    elif f_chg == "N":
+        df = df[chg_ord != 0].reset_index(drop=True)
+    # 전체(X)는 필터 적용 안 함
+
+if df.empty:
+    st.info(f"'최초계약여부 = {f_chg}' 조건에 맞는 데이터가 없어요. 다른 옵션으로 시도해보세요.")
     st.stop()
 
 # ──────────────────────────────────────────────
