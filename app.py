@@ -6,7 +6,9 @@ app.py
 """
 
 import io
+import base64
 from datetime import datetime, timedelta, date
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -16,10 +18,258 @@ from g2b_api import fetch_all, API_KEY
 from report import build_analysis, build_docx, _eok as _r_eok, _won as _r_won
 from excel_report import build_excel_report
 
+
+def _load_logo_b64():
+    """로고 파일을 같은 폴더에서 찾아 base64로 반환. 없으면 None."""
+    candidates = ["archipace_logo.png", "아키페이스_CI.png", "logo.png"]
+    here = Path(__file__).parent
+    for name in candidates:
+        p = here / name
+        if p.exists():
+            return base64.b64encode(p.read_bytes()).decode("ascii")
+    return None
+
 # ──────────────────────────────────────────────
 # 기본 설정
 # ──────────────────────────────────────────────
-st.set_page_config(page_title="조달 특정품목 분석", page_icon="📊", layout="wide")
+st.set_page_config(
+    page_title="ARCHIPACE | 조달 시장 분석",
+    page_icon="📊",
+    layout="wide",
+)
+
+# ──────────────────────────────────────────────
+# 디자인 테마 (베이지·브라운 · 오렌지 포인트)
+# ──────────────────────────────────────────────
+st.markdown("""
+<style>
+/* 전체 폰트 */
+html, body, [class*="css"]  {
+    font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* 메인 배경 */
+.stApp {
+    background-color: #FAF6F0;
+}
+
+/* 사이드바 */
+section[data-testid="stSidebar"] {
+    background-color: #F5EFE5;
+    border-right: 1px solid #E8DFD3;
+}
+section[data-testid="stSidebar"] > div {
+    padding-top: 1.2rem;
+}
+
+/* 사이드바 텍스트 */
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p {
+    color: #3D2E1F !important;
+}
+
+/* 사이드바 제목 */
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: #3D2E1F !important;
+    font-weight: 600;
+}
+
+/* 입력칸 */
+.stTextInput input, .stDateInput input, .stSelectbox > div > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8DFD3 !important;
+    border-radius: 4px !important;
+    color: #3D2E1F !important;
+}
+.stTextInput input:focus, .stDateInput input:focus {
+    border-color: #DC6400 !important;
+    box-shadow: 0 0 0 2px rgba(220, 100, 0, 0.1) !important;
+}
+
+/* 기본 버튼 */
+.stButton button {
+    background-color: #FFFFFF;
+    color: #3D2E1F;
+    border: 1px solid #D4C5B0;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.stButton button:hover {
+    border-color: #DC6400;
+    color: #DC6400;
+    background-color: #FFFFFF;
+}
+
+/* primary 버튼 (검색하기, 다운로드 등) */
+.stButton button[kind="primary"],
+.stDownloadButton button[kind="primary"] {
+    background-color: #DC6400 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #DC6400 !important;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(220, 100, 0, 0.15);
+}
+.stButton button[kind="primary"]:hover,
+.stDownloadButton button[kind="primary"]:hover {
+    background-color: #B85400 !important;
+    border-color: #B85400 !important;
+    color: #FFFFFF !important;
+}
+
+/* 메인 영역 제목 */
+h1, h2, h3, h4 {
+    color: #3D2E1F !important;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+/* 본문 텍스트 */
+.main p, .main span, .main label, .main div {
+    color: #3D2E1F;
+}
+
+/* 메트릭 카드 */
+[data-testid="stMetric"] {
+    background-color: #FFFFFF;
+    padding: 16px 20px;
+    border-radius: 6px;
+    border: 1px solid #E8DFD3;
+    border-left: 3px solid #DC6400;
+}
+[data-testid="stMetricLabel"] {
+    color: #9C7C5C !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+[data-testid="stMetricValue"] {
+    color: #3D2E1F !important;
+    font-weight: 700;
+    font-size: 26px !important;
+}
+
+/* 탭 디자인 */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+    border-bottom: 1px solid #E8DFD3;
+}
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent;
+    color: #9C7C5C;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 0;
+    border: none;
+}
+.stTabs [aria-selected="true"] {
+    color: #DC6400 !important;
+    border-bottom: 2px solid #DC6400 !important;
+    font-weight: 600 !important;
+}
+
+/* 라디오 버튼 */
+.stRadio label {
+    color: #3D2E1F !important;
+}
+
+/* 표 */
+.stDataFrame {
+    border: 1px solid #E8DFD3;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* 정보 박스 */
+.stAlert {
+    background-color: #FFFFFF;
+    border-left: 3px solid #DC6400;
+    border-radius: 4px;
+}
+
+/* expander */
+.streamlit-expanderHeader {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8DFD3 !important;
+    color: #3D2E1F !important;
+    font-weight: 500;
+}
+
+/* 구분선 */
+hr {
+    border-color: #E8DFD3 !important;
+}
+
+/* 진행률 막대 */
+.stProgress > div > div > div > div {
+    background-color: #DC6400;
+}
+
+/* 슬라이더 포인트 */
+.stSlider [data-baseweb="slider"] [role="slider"] {
+    background-color: #DC6400 !important;
+}
+
+/* Streamlit 기본 푸터/메뉴 숨기기 (선택) */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* 헤더 영역 컨테이너 */
+.archi-header {
+    background: #FFFFFF;
+    padding: 18px 28px;
+    border-bottom: 3px solid #DC6400;
+    margin: -1rem -1rem 1.5rem -1rem;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+.archi-header-divider {
+    width: 1px;
+    height: 36px;
+    background: #D4C5B0;
+}
+.archi-header-title {
+    font-size: 17px;
+    color: #3D2E1F;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin: 0;
+    line-height: 1.3;
+}
+.archi-header-subtitle {
+    font-size: 12px;
+    color: #9C7C5C;
+    margin: 2px 0 0 0;
+}
+.archi-header-meta {
+    margin-left: auto;
+    text-align: right;
+    font-size: 11px;
+    color: #9C7C5C;
+    line-height: 1.6;
+}
+
+/* 푸터 */
+.archi-footer {
+    background: #3D2E1F;
+    color: #D4C5B0;
+    padding: 14px 28px;
+    margin: 3rem -1rem -1rem -1rem;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    border-radius: 0;
+}
+.archi-footer .right {
+    color: #9C7C5C;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # 응답 필드 → 한글 컬럼명 매핑
 FIELD_MAP = {
@@ -203,8 +453,29 @@ search_btn = st.sidebar.button("🔎 검색하기", type="primary", use_containe
 # ──────────────────────────────────────────────
 # 메인 영역
 # ──────────────────────────────────────────────
-st.title("📊 조달청 특정품목 조달내역 분석")
-st.caption("나라장터 조달데이터허브 · 특정품목조달내역 API 기반")
+_logo_b64 = _load_logo_b64()
+_logo_html = (
+    f'<img src="data:image/png;base64,{_logo_b64}" '
+    f'style="height: 48px; width: auto;" alt="ARCHIPACE" />'
+) if _logo_b64 else (
+    '<span style="font-size: 22px; font-weight: 700; color: #646464; '
+    'letter-spacing: 3px;">ARCHI<span style="color: #DC6400;">|</span>PACE</span>'
+)
+
+st.markdown(f"""
+<div class="archi-header">
+    {_logo_html}
+    <div class="archi-header-divider"></div>
+    <div>
+        <div class="archi-header-title">📊 조달청 특정품목 조달내역 분석</div>
+        <div class="archi-header-subtitle">나라장터 조달데이터허브 · 특정품목조달내역 API 기반</div>
+    </div>
+    <div class="archi-header-meta">
+        Procurement Market Intelligence<br/>
+        <span style="color: #C8B89C;">v3.0 · 실시간 분석</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # 세션 상태로 데이터 보관
 if "df" not in st.session_state:
@@ -595,3 +866,14 @@ with tab7:
                 )
             except Exception as e:
                 st.error(f"엑셀 보고서 생성 중 오류: {e}")
+
+
+# ──────────────────────────────────────────────
+# 푸터
+# ──────────────────────────────────────────────
+st.markdown("""
+<div class="archi-footer">
+    <div>© 2026 ARCHIPACE · 조달 시장 분석 플랫폼</div>
+    <div class="right">Powered by 나라장터 OpenAPI</div>
+</div>
+""", unsafe_allow_html=True)
