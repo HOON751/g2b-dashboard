@@ -66,6 +66,8 @@ st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
 
 <style>
 html, body, [class*="css"], .stMarkdown, .stText, p, span, div, label, input, button {
@@ -262,7 +264,49 @@ h3 { font-size: 17px !important; }
     box-shadow: 0 2px 6px rgba(61, 46, 31, 0.04);
 }
 
-.streamlit-expanderHeader, [data-testid="stExpander"] summary {
+/* Expander - 화살표 아이콘이 텍스트로 보이지 않도록 정교하게 처리 */
+[data-testid="stExpander"] {
+    border: none !important;
+    background: transparent !important;
+}
+[data-testid="stExpander"] details {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8DFD3 !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+}
+[data-testid="stExpander"] details summary {
+    background-color: #FFFFFF !important;
+    color: #3D2E1F !important;
+    font-weight: 600 !important;
+    padding: 10px 14px !important;
+    cursor: pointer;
+    list-style: none;
+}
+[data-testid="stExpander"] details summary:hover {
+    background-color: #FAF6F0 !important;
+}
+/* 화살표 아이콘 영역 - 아이콘 폰트 강제 적용 */
+[data-testid="stExpander"] details summary svg {
+    fill: #DC6400 !important;
+    color: #DC6400 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+/* Material Icons 폰트가 깨질 때 텍스트 숨김 */
+[data-testid="stExpander"] details summary span[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Outlined', 'Material Icons' !important;
+    font-size: 18px !important;
+    color: #DC6400 !important;
+    font-weight: 400 !important;
+    /* 폰트 안 로드되어 텍스트로 보일 때를 대비 */
+    overflow: hidden !important;
+    max-width: 18px !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+}
+
+.streamlit-expanderHeader {
     background-color: #FFFFFF !important;
     border: 1px solid #E8DFD3 !important;
     color: #3D2E1F !important;
