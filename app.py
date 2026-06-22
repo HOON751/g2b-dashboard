@@ -18,6 +18,27 @@ from g2b_api import fetch_all, API_KEY
 from report import build_analysis, build_docx, _eok as _r_eok, _won as _r_won
 from excel_report import build_excel_report
 
+# Plotly 차트 공통 스타일 (ARCHIPACE 테마)
+import plotly.graph_objects as go
+import plotly.io as pio
+
+_archi_template = go.layout.Template()
+_archi_template.layout = go.Layout(
+    font=dict(family="Pretendard, Noto Sans KR, sans-serif", size=12, color="#3D2E1F"),
+    paper_bgcolor="rgba(255,255,255,0)",
+    plot_bgcolor="#FFFFFF",
+    colorway=["#DC6400", "#A87A56", "#5C3A1F", "#C8A878", "#9C7C5C",
+              "#E0A060", "#D4C5B0", "#8B4513"],
+    xaxis=dict(gridcolor="#F0E8DC", linecolor="#D4C5B0", tickcolor="#D4C5B0",
+               title=dict(font=dict(size=12, color="#5C4A36"))),
+    yaxis=dict(gridcolor="#F0E8DC", linecolor="#D4C5B0", tickcolor="#D4C5B0",
+               title=dict(font=dict(size=12, color="#5C4A36"))),
+    margin=dict(l=20, r=20, t=20, b=40),
+    hoverlabel=dict(bgcolor="#3D2E1F", font=dict(color="#FFFFFF", size=12)),
+)
+pio.templates["archipace"] = _archi_template
+pio.templates.default = "archipace"
+
 
 def _load_logo_b64():
     """로고 파일을 같은 폴더에서 찾아 base64로 반환. 없으면 None."""
@@ -39,234 +60,402 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────
-# 디자인 테마 (베이지·브라운 · 오렌지 포인트)
+# 디자인 테마 (ARCHIPACE Edition)
 # ──────────────────────────────────────────────
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+
 <style>
-/* 전체 폰트 */
-html, body, [class*="css"]  {
-    font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+html, body, [class*="css"], .stMarkdown, .stText, p, span, div, label, input, button {
+    font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* 메인 배경 */
 .stApp {
-    background-color: #FAF6F0;
+    background: linear-gradient(180deg, #FAF6F0 0%, #F5EFE5 100%);
+    background-attachment: fixed;
 }
 
-/* 사이드바 */
+.main .block-container {
+    padding-top: 1rem;
+    padding-bottom: 0;
+    max-width: 1400px;
+}
+
 section[data-testid="stSidebar"] {
-    background-color: #F5EFE5;
-    border-right: 1px solid #E8DFD3;
+    background: linear-gradient(180deg, #F5EFE5 0%, #EDE3D2 100%);
+    border-right: 1px solid #D4C5B0;
 }
 section[data-testid="stSidebar"] > div {
     padding-top: 1.2rem;
 }
 
-/* 사이드바 텍스트 */
 section[data-testid="stSidebar"] .stMarkdown,
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] p {
     color: #3D2E1F !important;
 }
 
-/* 사이드바 제목 */
-section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h1 {
+    color: #3D2E1F !important;
+    font-weight: 700;
+    font-size: 18px;
+    border-bottom: 2px solid #DC6400;
+    padding-bottom: 8px;
+    display: inline-block;
+}
 section[data-testid="stSidebar"] h2,
 section[data-testid="stSidebar"] h3 {
     color: #3D2E1F !important;
     font-weight: 600;
 }
 
-/* 입력칸 */
+section[data-testid="stSidebar"] .stMarkdown strong {
+    color: #5C3A1F !important;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+}
+
 .stTextInput input, .stDateInput input, .stSelectbox > div > div {
     background-color: #FFFFFF !important;
-    border: 1px solid #E8DFD3 !important;
-    border-radius: 4px !important;
+    border: 1px solid #D4C5B0 !important;
+    border-radius: 6px !important;
     color: #3D2E1F !important;
+    transition: all 0.2s ease;
 }
 .stTextInput input:focus, .stDateInput input:focus {
     border-color: #DC6400 !important;
-    box-shadow: 0 0 0 2px rgba(220, 100, 0, 0.1) !important;
+    box-shadow: 0 0 0 3px rgba(220, 100, 0, 0.12) !important;
 }
 
-/* 기본 버튼 */
 .stButton button {
     background-color: #FFFFFF;
     color: #3D2E1F;
     border: 1px solid #D4C5B0;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 500;
     transition: all 0.2s ease;
+    padding: 0.5rem 1.2rem;
 }
 .stButton button:hover {
     border-color: #DC6400;
     color: #DC6400;
-    background-color: #FFFFFF;
+    background-color: #FFFAF3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(61, 46, 31, 0.06);
 }
 
-/* primary 버튼 (검색하기, 다운로드 등) */
 .stButton button[kind="primary"],
 .stDownloadButton button[kind="primary"] {
-    background-color: #DC6400 !important;
+    background: linear-gradient(135deg, #E07020 0%, #DC6400 100%) !important;
     color: #FFFFFF !important;
-    border: 1px solid #DC6400 !important;
+    border: none !important;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(220, 100, 0, 0.15);
+    box-shadow: 0 3px 8px rgba(220, 100, 0, 0.25);
+    padding: 0.6rem 1.5rem;
 }
 .stButton button[kind="primary"]:hover,
 .stDownloadButton button[kind="primary"]:hover {
-    background-color: #B85400 !important;
-    border-color: #B85400 !important;
+    background: linear-gradient(135deg, #DC6400 0%, #B85400 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(220, 100, 0, 0.32);
     color: #FFFFFF !important;
 }
 
-/* 메인 영역 제목 */
 h1, h2, h3, h4 {
-    color: #3D2E1F !important;
-    font-weight: 600;
-    letter-spacing: -0.3px;
+    color: #2E2317 !important;
+    font-weight: 700;
+    letter-spacing: -0.5px;
 }
+h1 { font-size: 26px !important; }
+h2 { font-size: 20px !important; }
+h3 { font-size: 17px !important; }
 
-/* 본문 텍스트 */
 .main p, .main span, .main label, .main div {
     color: #3D2E1F;
 }
 
-/* 메트릭 카드 */
 [data-testid="stMetric"] {
     background-color: #FFFFFF;
-    padding: 16px 20px;
-    border-radius: 6px;
+    padding: 18px 22px;
+    border-radius: 10px;
     border: 1px solid #E8DFD3;
-    border-left: 3px solid #DC6400;
+    border-left: 4px solid #DC6400;
+    box-shadow: 0 2px 8px rgba(61, 46, 31, 0.04);
+    transition: all 0.25s ease;
+}
+[data-testid="stMetric"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(61, 46, 31, 0.08);
+    border-left-color: #B85400;
 }
 [data-testid="stMetricLabel"] {
     color: #9C7C5C !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 [data-testid="stMetricValue"] {
-    color: #3D2E1F !important;
+    color: #2E2317 !important;
     font-weight: 700;
-    font-size: 26px !important;
+    font-size: 28px !important;
+    letter-spacing: -0.8px;
 }
 
-/* 탭 디자인 */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0;
-    border-bottom: 1px solid #E8DFD3;
+    border-bottom: 2px solid #E8DFD3;
+    background-color: transparent;
 }
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #9C7C5C;
     font-weight: 500;
-    padding: 10px 18px;
+    padding: 12px 20px;
     border-radius: 0;
     border: none;
+    transition: all 0.2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #3D2E1F;
 }
 .stTabs [aria-selected="true"] {
     color: #DC6400 !important;
     border-bottom: 2px solid #DC6400 !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    margin-bottom: -2px;
 }
 
-/* 라디오 버튼 */
 .stRadio label {
     color: #3D2E1F !important;
 }
 
-/* 표 */
-.stDataFrame {
+.stDataFrame, [data-testid="stDataFrame"] {
     border: 1px solid #E8DFD3;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 4px rgba(61, 46, 31, 0.04);
+}
+[data-testid="stDataFrame"] thead {
+    background-color: #F5EFE5 !important;
+}
+[data-testid="stDataFrame"] thead th {
+    color: #3D2E1F !important;
+    font-weight: 700 !important;
+    background-color: #F5EFE5 !important;
+    border-bottom: 2px solid #D4C5B0 !important;
+}
+[data-testid="stDataFrame"] tbody tr:hover {
+    background-color: #FAF6F0 !important;
 }
 
-/* 정보 박스 */
 .stAlert {
     background-color: #FFFFFF;
-    border-left: 3px solid #DC6400;
-    border-radius: 4px;
+    border-left: 4px solid #DC6400;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(61, 46, 31, 0.04);
 }
 
-/* expander */
-.streamlit-expanderHeader {
+.streamlit-expanderHeader, [data-testid="stExpander"] summary {
     background-color: #FFFFFF !important;
     border: 1px solid #E8DFD3 !important;
     color: #3D2E1F !important;
-    font-weight: 500;
+    font-weight: 600;
+    border-radius: 6px !important;
 }
 
-/* 구분선 */
 hr {
     border-color: #E8DFD3 !important;
+    margin: 1.5rem 0 !important;
 }
 
-/* 진행률 막대 */
 .stProgress > div > div > div > div {
-    background-color: #DC6400;
+    background: linear-gradient(90deg, #E07020 0%, #DC6400 100%);
 }
 
-/* 슬라이더 포인트 */
 .stSlider [data-baseweb="slider"] [role="slider"] {
     background-color: #DC6400 !important;
 }
 
-/* Streamlit 기본 푸터/메뉴 숨기기 (선택) */
+.stCaption, [data-testid="stCaptionContainer"] {
+    color: #9C7C5C !important;
+    font-size: 12px !important;
+}
+
 #MainMenu {visibility: hidden;}
+header[data-testid="stHeader"] {background: transparent;}
 footer {visibility: hidden;}
 
-/* 헤더 영역 컨테이너 */
 .archi-header {
     background: #FFFFFF;
-    padding: 18px 28px;
+    padding: 22px 32px;
     border-bottom: 3px solid #DC6400;
-    margin: -1rem -1rem 1.5rem -1rem;
+    margin: -1rem -2rem 0 -2rem;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 28px;
+    box-shadow: 0 2px 12px rgba(61, 46, 31, 0.06);
 }
 .archi-header-divider {
     width: 1px;
-    height: 36px;
-    background: #D4C5B0;
+    height: 42px;
+    background: linear-gradient(180deg, transparent 0%, #D4C5B0 50%, transparent 100%);
 }
 .archi-header-title {
-    font-size: 17px;
-    color: #3D2E1F;
-    font-weight: 600;
-    letter-spacing: -0.3px;
+    font-size: 18px;
+    color: #2E2317;
+    font-weight: 700;
+    letter-spacing: -0.4px;
     margin: 0;
     line-height: 1.3;
 }
 .archi-header-subtitle {
     font-size: 12px;
     color: #9C7C5C;
-    margin: 2px 0 0 0;
+    margin: 3px 0 0 0;
+    letter-spacing: 0.2px;
 }
 .archi-header-meta {
     margin-left: auto;
     text-align: right;
     font-size: 11px;
     color: #9C7C5C;
-    line-height: 1.6;
+    line-height: 1.7;
+    font-weight: 500;
+}
+.archi-header-badge {
+    display: inline-block;
+    background: #FAF6F0;
+    color: #DC6400;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid #F0DCC2;
 }
 
-/* 푸터 */
+.archi-hero {
+    background: linear-gradient(135deg, #FFFFFF 0%, #FAF6F0 100%);
+    border: 1px solid #E8DFD3;
+    border-radius: 16px;
+    padding: 48px 56px;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(61, 46, 31, 0.05);
+}
+.archi-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100%;
+    background-image:
+        linear-gradient(135deg, transparent 60%, rgba(220, 100, 0, 0.04) 100%),
+        radial-gradient(circle at 70% 30%, rgba(220, 100, 0, 0.08), transparent 60%);
+    pointer-events: none;
+}
+.archi-hero-eyebrow {
+    display: inline-block;
+    color: #DC6400;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #DC6400;
+}
+.archi-hero-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #2E2317;
+    letter-spacing: -1px;
+    margin: 0 0 12px 0;
+    line-height: 1.25;
+}
+.archi-hero-title em {
+    color: #DC6400;
+    font-style: normal;
+    font-weight: 800;
+}
+.archi-hero-desc {
+    font-size: 15px;
+    color: #5C4A36;
+    line-height: 1.7;
+    margin: 0 0 24px 0;
+    max-width: 580px;
+}
+.archi-hero-features {
+    display: flex;
+    gap: 32px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+.archi-hero-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 200px;
+}
+.archi-hero-feature-icon {
+    width: 36px;
+    height: 36px;
+    background: #FAF0E5;
+    color: #DC6400;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.archi-hero-feature-text strong {
+    display: block;
+    color: #2E2317;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.archi-hero-feature-text span {
+    color: #9C7C5C;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .archi-footer {
-    background: #3D2E1F;
+    background: linear-gradient(135deg, #3D2E1F 0%, #2E2317 100%);
     color: #D4C5B0;
-    padding: 14px 28px;
-    margin: 3rem -1rem -1rem -1rem;
-    font-size: 11px;
+    padding: 22px 32px;
+    margin: 3rem -2rem 0 -2rem;
+    font-size: 12px;
     display: flex;
     justify-content: space-between;
-    border-radius: 0;
+    align-items: center;
+    border-top: 3px solid #DC6400;
 }
-.archi-footer .right {
+.archi-footer-left strong {
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.archi-footer-left span {
     color: #9C7C5C;
+    margin-left: 12px;
+}
+.archi-footer-right {
+    color: #9C7C5C;
+    font-size: 11px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -467,12 +656,12 @@ st.markdown(f"""
     {_logo_html}
     <div class="archi-header-divider"></div>
     <div>
-        <div class="archi-header-title">📊 조달청 특정품목 조달내역 분석</div>
-        <div class="archi-header-subtitle">나라장터 조달데이터허브 · 특정품목조달내역 API 기반</div>
+        <div class="archi-header-title">조달청 특정품목 조달내역 분석</div>
+        <div class="archi-header-subtitle">G2B Procurement Intelligence · 나라장터 조달데이터허브 기반</div>
     </div>
     <div class="archi-header-meta">
-        Procurement Market Intelligence<br/>
-        <span style="color: #C8B89C;">v3.0 · 실시간 분석</span>
+        <span class="archi-header-badge">● LIVE</span><br/>
+        <span style="margin-top: 4px; display: inline-block;">실시간 시장 분석 · v3.0</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -523,7 +712,40 @@ if search_btn:
 df = st.session_state.df
 
 if df is None:
-    st.info("👈 왼쪽에서 품목과 기간을 정하고 **검색하기**를 눌러주세요.")
+    st.markdown("""
+<div class="archi-hero">
+    <span class="archi-hero-eyebrow">PROCUREMENT INTELLIGENCE</span>
+    <h2 class="archi-hero-title">조달 데이터로<br/>시장의 <em>구조</em>를 설계하다</h2>
+    <p class="archi-hero-desc">
+        나라장터에 축적된 방대한 조달 계약 데이터를 정교하게 분석합니다.
+        품목별 시장 규모, 경쟁 구도, 수요기관 분포를 한눈에 파악하고
+        의사결정에 필요한 인사이트를 즉시 확인하세요.
+    </p>
+    <div class="archi-hero-features">
+        <div class="archi-hero-feature">
+            <div class="archi-hero-feature-icon">①</div>
+            <div class="archi-hero-feature-text">
+                <strong>품목 검색</strong>
+                <span>왼쪽 사이드바에서 품명·품번으로 원하는 품목을 지정하세요</span>
+            </div>
+        </div>
+        <div class="archi-hero-feature">
+            <div class="archi-hero-feature-icon">②</div>
+            <div class="archi-hero-feature-text">
+                <strong>기간 설정</strong>
+                <span>최대 12개월까지 분석할 조회 기간을 선택할 수 있습니다</span>
+            </div>
+        </div>
+        <div class="archi-hero-feature">
+            <div class="archi-hero-feature-icon">③</div>
+            <div class="archi-hero-feature-text">
+                <strong>인사이트 확인</strong>
+                <span>업체별·기관별·지역별 분석과 자동 보고서를 받아보세요</span>
+            </div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
     st.stop()
 
 if df.empty:
@@ -579,7 +801,7 @@ with tab1:
         g.columns = ["업체명", "공급금액", "계약건수"]
         fig = px.bar(g, x="공급금액", y="업체명", orientation="h",
                      text=g["공급금액"].apply(eok),
-                     color="공급금액", color_continuous_scale="Blues")
+                     color="공급금액", color_continuous_scale=[[0.0, "#F5EFE5"], [0.5, "#E0A060"], [1.0, "#DC6400"]])
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=max(400, topn * 28))
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(
@@ -598,7 +820,7 @@ with tab2:
         g.columns = ["수요기관", "구매액", "계약건수"]
         fig = px.bar(g, x="구매액", y="수요기관", orientation="h",
                      text=g["구매액"].apply(eok),
-                     color="구매액", color_continuous_scale="Greens")
+                     color="구매액", color_continuous_scale=[[0.0, "#F5EFE5"], [0.5, "#A87A56"], [1.0, "#5C3A1F"]])
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=max(400, topn * 28))
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(
@@ -623,11 +845,11 @@ with tab3:
             ts = base_ts.resample(rule).agg(["sum", "count"]).reset_index()
         ts.columns = ["일자", "공급금액", "계약건수"]
         fig = px.line(ts, x="일자", y="공급금액", markers=True)
-        fig.update_traces(line_color="#2563eb")
+        fig.update_traces(line_color="#DC6400")
         fig.update_layout(height=420, yaxis_title="공급금액(원)")
         st.plotly_chart(fig, use_container_width=True)
         fig2 = px.bar(ts, x="일자", y="계약건수")
-        fig2.update_traces(marker_color="#93c5fd")
+        fig2.update_traces(marker_color="#C8A878")
         fig2.update_layout(height=280, yaxis_title="계약 건수")
         st.plotly_chart(fig2, use_container_width=True)
     else:
@@ -643,12 +865,12 @@ with tab4:
         with col1:
             fig = px.pie(g, names="구분", values="공급금액", hole=0.45,
                          title="공급금액 비중",
-                         color_discrete_sequence=["#f59e0b", "#94a3b8", "#cbd5e1"])
+                         color_discrete_sequence=["#DC6400", "#A87A56", "#D4C5B0"])
             st.plotly_chart(fig, use_container_width=True)
         with col2:
             fig2 = px.pie(g, names="구분", values="계약건수", hole=0.45,
                           title="계약건수 비중",
-                          color_discrete_sequence=["#f59e0b", "#94a3b8", "#cbd5e1"])
+                          color_discrete_sequence=["#DC6400", "#A87A56", "#D4C5B0"])
             st.plotly_chart(fig2, use_container_width=True)
         st.dataframe(
             g.assign(공급금액=g["공급금액"].apply(won)),
@@ -666,7 +888,7 @@ with tab5:
              .sort_values("sum", ascending=False).reset_index())
         g.columns = ["지역", "공급금액", "계약건수"]
         fig = px.bar(g, x="지역", y="공급금액", text=g["공급금액"].apply(eok),
-                     color="공급금액", color_continuous_scale="Purples")
+                     color="공급금액", color_continuous_scale=[[0.0, "#FAF0E5"], [0.5, "#D49060"], [1.0, "#8B4513"]])
         fig.update_layout(height=420, yaxis_title="공급금액(원)")
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(
@@ -800,7 +1022,7 @@ with tab7:
                 if "상위업체" in analysis and len(analysis["상위업체"]) > 0:
                     gg = analysis["상위업체"].head(10)
                     f = px.bar(gg, x="sum", y="업체명", orientation="h",
-                               color="sum", color_continuous_scale="Blues",
+                               color="sum", color_continuous_scale=[[0.0, "#F5EFE5"], [0.5, "#E0A060"], [1.0, "#DC6400"]],
                                labels={"sum": "공급금액", "업체명": ""})
                     f.update_layout(yaxis={"categoryorder": "total ascending"},
                                     height=400, showlegend=False)
@@ -808,7 +1030,7 @@ with tab7:
                 if "상위기관" in analysis and len(analysis["상위기관"]) > 0:
                     gg = analysis["상위기관"].head(10)
                     f = px.bar(gg, x="sum", y="수요기관", orientation="h",
-                               color="sum", color_continuous_scale="Greens",
+                               color="sum", color_continuous_scale=[[0.0, "#F5EFE5"], [0.5, "#A87A56"], [1.0, "#5C3A1F"]],
                                labels={"sum": "구매액", "수요기관": ""})
                     f.update_layout(yaxis={"categoryorder": "total ascending"},
                                     height=400, showlegend=False)
@@ -873,7 +1095,12 @@ with tab7:
 # ──────────────────────────────────────────────
 st.markdown("""
 <div class="archi-footer">
-    <div>© 2026 ARCHIPACE · 조달 시장 분석 플랫폼</div>
-    <div class="right">Powered by 나라장터 OpenAPI</div>
+    <div class="archi-footer-left">
+        <strong>ARCHIPACE</strong>
+        <span>Procurement Intelligence Platform · © 2026</span>
+    </div>
+    <div class="archi-footer-right">
+        Powered by 나라장터 OpenAPI · 데이터 출처: 공공데이터포털
+    </div>
 </div>
 """, unsafe_allow_html=True)
